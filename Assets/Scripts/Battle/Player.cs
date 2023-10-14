@@ -105,6 +105,12 @@ namespace Player_Battle
             }
         }
 
+        public void TakeDamage_NoIFrames(int damage)
+        {
+            dataFile.Hp -= damage;
+            RepaintHealthbar();
+        }
+
         public void Heal(int points)
         {
             dataFile.Hp += points;
@@ -128,31 +134,31 @@ namespace Player_Battle
             healthText.text = (dataFile.Hp + "/" + healthbar.maxValue).ToString();
         }
 
-        [SerializeField] private Color defaultColor;
-        [SerializeField] private Color damagedColor;
+        [SerializeField] private Color defaultColor = new(255, 0, 0);
+        [SerializeField] private Color damagedColor = new(150, 0, 0);
         [SerializeField, Tooltip("( Frames are calculated in FixedUpdate() )")] private int IFrames;
 
         private IEnumerator Invincibility()
         {
-            Coroutine pipis = StartCoroutine(Invicibility_AnimateSprite());
             canTakeDamage = false;
-            for (int i = 0; i < IFrames; i++)
-            {
-                yield return new WaitForFixedUpdate();
+            
+            Coroutine animate_Sprite = StartCoroutine(Invicibility_AnimateSprite());
 
-                //spr.color = damagedColor;
-                //yield return new WaitForSeconds(.125f);
-                //spr.color = defaultColor;
-                //yield return new WaitForSeconds(.125f);
-            }
-            StopCoroutine(pipis);
+            for (int i = 0; i < IFrames; i++)
+                yield return new WaitForFixedUpdate();
+            
+            StopCoroutine(animate_Sprite);
+            
+            // Reset sprite color to avoid stupid shenanigans.
             spr.color = defaultColor;
+
             canTakeDamage = true;
         }
 
         private IEnumerator Invicibility_AnimateSprite()
         {
-            for (int i = 0; i < IFrames; i++)
+            // While true is true do this
+            while (true)
             {
                 spr.color = damagedColor;
                 yield return new WaitForSeconds(.125f);

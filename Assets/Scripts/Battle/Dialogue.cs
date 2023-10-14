@@ -37,12 +37,19 @@ namespace BattleSystems
 
         void Update()
         {
+            // For debugging
             if (Input.GetKeyDown(KeyCode.D)) RequestDialogue();
 
-            Vector2 boxSize = new(bboxHandler.upWall.localScale.x, bboxHandler.leftWall.localScale.x);
+            // gamer fps
+            if (bboxHandler.isChangingSize)
+            {
+                Vector2 boxSize = new(bboxHandler.upWall.localScale.x, bboxHandler.leftWall.localScale.x);
 
-            dialogueHolder.rectTransform.sizeDelta = boxSize * convertToCanvas;
+                dialogueHolder.rectTransform.sizeDelta = boxSize * convertToCanvas;
 
+            }
+            // Set text color to transparent when it isn't the players turn because yes.
+            // I don't want to try to find any other solutions to this.
             if (!FManager.IsPlayerTurn()) dialogueHolder.color = Color.clear;
             else dialogueHolder.color = Color.white;
         }
@@ -67,6 +74,8 @@ namespace BattleSystems
             dialogueHolder.text = string.Empty;
 
             dialogueHolder.fontSize = dialoguePool[index].textSize;
+
+            // UNDERTALE.
             dialogueHolder.text += '*' + " ";
 
             for (int i = 0; i < dialoguePool[index].line.Length; i++)
@@ -78,6 +87,7 @@ namespace BattleSystems
 
         private void StopDialogue()
         {
+            // Directly question the coroutine because it can be broken unlike the bboxHandler's coroutine.
             if (appendText != null)
             {
                 StopCoroutine(appendText);

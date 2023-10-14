@@ -5,6 +5,7 @@ namespace BattleSystems
 {
     public class BattleBoxHandler : MonoBehaviour
     {
+        #region Variable Decleration
         Transform player;
         Transform walls;
 
@@ -16,20 +17,17 @@ namespace BattleSystems
         private Transform rightWall;
 
         // The position of the battle box (useless).
+        // Why do I still have this?
         [SerializeField]
         private Vector2 BattleBoxPosition;
 
-        [SerializeField]
-        private float changeSpeed = 12500;
-
-        [HideInInspector]
         public bool isChangingSize;
 
-        public readonly Vector2 defaultHeight = new(3, .2f);
-        public readonly Vector2 defaultWidth = new(3, .2f);
         public readonly Vector2 dialogueWidth = new(15, .2f);
         public readonly Vector2 dialogueHeight = new(4, .2f);
-        const float dWidth = .2f;
+        private const float defaultWidth = .2f;
+
+        #endregion
 
         private void Start()
         {
@@ -42,30 +40,8 @@ namespace BattleSystems
             rightWall = walls.GetChild(3);
         }
 
-        /// <param name="UpBottomScale"> The scale for the up and bottom scales. (Controls the width of the box)</param>
-        /// <param name="LeftRightScale"> The scale for the left and right scales. (Controls the height of the box)</param>
-        private IEnumerator ChangeSize(Vector3 UpBottomScale, Vector3 LeftRightScale)
-        {
-            if (isChangingSize) yield break;
-            isChangingSize = true;
-            float ep = changeSpeed / 25000;
-            float sqrChangeSpeed = changeSpeed * changeSpeed;
 
-
-            while ((Vector2)upWall.localScale != (Vector2)UpBottomScale || (Vector2)leftWall.localScale != (Vector2)LeftRightScale)
-            {
-                upWall.localScale = downWall.localScale = Vector2.MoveTowards(upWall.localScale, UpBottomScale, ep + (Vector3.SqrMagnitude(upWall.localScale - UpBottomScale) / sqrChangeSpeed));
-                leftWall.localScale = rightWall.localScale = Vector2.MoveTowards(leftWall.localScale, LeftRightScale, ep + (Vector3.SqrMagnitude(leftWall.localScale - LeftRightScale) / sqrChangeSpeed));
-
-                AdjustPositions();
-
-                yield return new WaitForFixedUpdate();
-            }
-
-            AdjustPositions();
-            isChangingSize = false;
-        }
-
+        [SerializeField] float timeToFinish;
         /// /// <summary>
         /// <br> Defaults the width to .2f or basically the set default value</br>
         /// </summary>
@@ -74,21 +50,32 @@ namespace BattleSystems
         private IEnumerator ChangeSize(float UpBottomScale, float LeftRightScale)
         {
             isChangingSize = true;
-            float ep = changeSpeed / 25000;
-            float sqrChangeSpeed = changeSpeed * changeSpeed;
+            //float ep = changeSpeed / 25000;
+            //float sqrChangeSpeed = changeSpeed * changeSpeed;
 
-            while (upWall.localScale.x != UpBottomScale || leftWall.localScale.x != LeftRightScale)
+            float timer = 0f;
+            while (upWall.localScale.x != UpBottomScale  || leftWall.localScale.x != LeftRightScale)
             {
-                upWall.localScale = downWall.localScale = new Vector2(Mathf.MoveTowards(upWall.localScale.x, UpBottomScale, ep + (Vector2.SqrMagnitude((Vector2)upWall.localScale - Vector2.one * UpBottomScale) / sqrChangeSpeed)), dWidth);
-                leftWall.localScale = rightWall.localScale = new Vector2(Mathf.MoveTowards(leftWall.localScale.x, LeftRightScale, ep + (Vector2.SqrMagnitude((Vector2)leftWall.localScale - Vector2.one * LeftRightScale) / sqrChangeSpeed)), dWidth);
+                print("running");
+                timer += Time.fixedDeltaTime;
+                float t = timer / timeToFinish;
+                
+                upWall.localScale = downWall.localScale = new(Mathf.Lerp(upWall.localScale.x, UpBottomScale, t), defaultWidth);
+                leftWall.localScale = rightWall.localScale = new Vector2(Mathf.Lerp(leftWall.localScale.x, LeftRightScale, t), defaultWidth);
+                //upWall.localScale = downWall.localScale = new Vector2(Mathf.MoveTowards(upWall.localScale.x, UpBottomScale, ep + (Vector2.SqrMagnitude((Vector2)upWall.localScale - Vector2.one * UpBottomScale) / sqrChangeSpeed)), dWidth);
+                //leftWall.localScale = rightWall.localScale = new Vector2(Mathf.MoveTowards(leftWall.localScale.x, LeftRightScale, ep + (Vector2.SqrMagnitude((Vector2)leftWall.localScale - Vector2.one * LeftRightScale) / sqrChangeSpeed)), dWidth);
 
                 AdjustPositions();
-
                 yield return new WaitForFixedUpdate();
             }
-
             AdjustPositions();
             isChangingSize = false;
+        }
+
+        [SerializeField] private float epsilon = Mathf.Epsilon;
+        private bool ApproxEqualTo(float a, float b, float epsilon)
+        {
+            return Mathf.Abs(a - b) < epsilon;
         }
 
         private Coroutine coroutine;
@@ -100,6 +87,8 @@ namespace BattleSystems
             // I mean... doesn't hurt to try, right?
 
             // I mean it works fine. Can't imagine a situation where this doesn't work.
+
+            // If you don't do this the fps will die.
             if (isChangingSize)
                 StopCoroutine(coroutine);
             coroutine = StartCoroutine(ChangeSize(width, height));
@@ -107,6 +96,8 @@ namespace BattleSystems
 
         void AdjustPositions()
         {
+            // Ah yes. Numbers. Totally makes sense.
+
             Vector2 currentUpBottomScale = upWall.localScale;
             Vector2 currentLeftRightScale = leftWall.localScale;
 

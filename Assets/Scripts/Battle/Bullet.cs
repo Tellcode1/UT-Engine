@@ -1,4 +1,5 @@
 using UnityEngine;
+using static Player_Battle.Player;
 
 public abstract class Bullet : MonoBehaviour
 {
@@ -6,8 +7,13 @@ public abstract class Bullet : MonoBehaviour
     /// Implement this into OnCollisionEnter or OnCollisionStay depending on the needs.
     /// </summary>
     /// <param name="damage">The damage sent to the player.</param>
-    public void SendDamageInfo(int damage)
+    protected void SendDamage(int damage)
     {
-        Player_Battle.Player.player.TakeDamage(damage);
+        player.TakeDamage(damage);
+    }
+
+    protected void SendDamage_NoIFrames(int damage)
+    {
+        player.TakeDamage_NoIFrames(damage);
     }
 }
