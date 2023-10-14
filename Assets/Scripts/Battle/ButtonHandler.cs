@@ -1,53 +1,30 @@
-using FightHandler;
 using UnityEngine;
+using static BattleSystems.FightManager;
 
-public class ButtonHandler : MonoBehaviour
+namespace BattleSystems
 {
-    SpriteRenderer spr;
-
-    [SerializeField] int id;
-    [SerializeField] Sprite interactingSprite;
-    [SerializeField] Sprite staticSprite;
-
-    private void Update()
+    public class ButtonHandler : MonoBehaviour
     {
-        if (InputManager.inputMgr.GetConfirm() && FightManager.FManager.IsPlayerTurn() && FightManager.FManager.IsInteracting(id))
+        private SpriteRenderer spr;
+
+        [SerializeReference] private int id;
+        [SerializeReference] private Sprite interactingSprite;
+        [SerializeReference] private Sprite staticSprite;
+
+        private void Update()
         {
-            switch (id)
-            {
-                case 0:
-                    {
-                        FightManager.FManager.CallFIGHT();
-                        break; ;
-                    }
-                case 1:
-                    {
-                        FightManager.FManager.CallACT();
-                        break;
-                    }
-                case 2:
-                    {
-                        FightManager.FManager.CallITEM();
-                        break;
-                    }
-                case 3:
-                    {
-                        FightManager.FManager.CallMERCY();
-                        break;
-                    }
-            }
+            if (InputManager.inputMgr.GetConfirm() && FManager.IsPlayerTurn() && FManager.IsInteracting(id))
+                FManager.Call(id);
         }
+
+        public void Initialize()
+        {
+            spr = GetComponent<SpriteRenderer>();
+        }
+
+        public void EnterInteraction() => spr.sprite = interactingSprite;
+
+
+        public void LeaveInteraction() => spr.sprite = staticSprite;
     }
-
-    public void Initialize()
-    {
-        spr = GetComponent<SpriteRenderer>();
-        staticSprite = (Sprite)Resources.Load(id.ToString() + "_0", typeof(Sprite));
-        interactingSprite = (Sprite)Resources.Load(id.ToString() + "_1", typeof(Sprite));
-    }
-
-    public void EnterInteraction() => spr.sprite = interactingSprite;
-
-
-    public void LeaveInteraction() => spr.sprite = staticSprite;
 }

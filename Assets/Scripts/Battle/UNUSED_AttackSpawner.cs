@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 
-public class AttackSpawner : MonoBehaviour
+public class UNUSED_AttackSpawner : MonoBehaviour
 {
     [HideInInspector] public GameObject[] Attacks;
     [HideInInspector] public float[] AttackTime;
@@ -31,14 +31,14 @@ public class AttackSpawner : MonoBehaviour
 }
 
 #if UNITY_EDITOR
-[CanEditMultipleObjects, CustomEditor(typeof(AttackSpawner))]
+[CanEditMultipleObjects, CustomEditor(typeof(UNUSED_AttackSpawner))]
 public class DrawEditor : Editor
 {
-    AttackSpawner parent;
+    UNUSED_AttackSpawner parent;
     public override void OnInspectorGUI()
     {
         DrawDefaultInspector();
-        parent = (AttackSpawner)target;
+        parent = (UNUSED_AttackSpawner)target;
         for (int i = 0; i < parent.Attacks.Length; i++)
         {
             EditorGUILayout.BeginHorizontal();

@@ -1,9 +1,9 @@
-using Player_Battle;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
+using static InputManager;
 
-namespace FightHandler
+namespace BattleSystems
 {
     public class FightManager : MonoBehaviour
     {
@@ -12,15 +12,11 @@ namespace FightHandler
 
         private Transform player;
         private Player_Battle.Player playerMovement;
-        private Battle_Dialogue dialogue;
+        private Dialogue dialogue;
         private BattleBoxHandler boxHandler;
         private ButtonHandler[] btnHandlers;
 
-        public enum PossibleFightStates
-        {
-            PlayerTurn,
-            EnemyTurn,
-        };
+        private bool isPlayerTurn;
 
         // i = 0 FIGHTPos = new(-5.4f, -4.4f);
         // i = 1 ACTPos = new(-2.4f, -4.4f);
@@ -30,18 +26,16 @@ namespace FightHandler
         private readonly Vector2 defaultPos = new(0, -1f);
         private readonly Vector2[] buttonPos = new Vector2[4] { new Vector2(-5.4f, -4.4f), new Vector2(-2.4f, -4.4f), new Vector2(.6f, -4.4f), new Vector2(3.6f, -4.4f) };
 
-        private int playerOnID;
+        [Range(0, 3)] private int playerOnID = 0;
         public int turn;
-
-        public PossibleFightStates currentState = new();
 
         [System.Serializable]
         public struct FightData
         {
-            [Range(1, 100)] public float enemyTurnTime;
+            [Min(1)] public float enemyTurnTime;
         }
-        [SerializeField] FightData fightData = new() { enemyTurnTime = 5f };
 
+        [SerializeField] FightData fightData = new() { enemyTurnTime = 5f };
 
         private void Start()
         {
@@ -53,12 +47,12 @@ namespace FightHandler
             playerMovement = player.GetComponent<Player_Battle.Player>();
 
             boxHandler = GameObject.FindWithTag("BattleBoxHandler").GetComponent<BattleBoxHandler>();
-            dialogue = GameObject.FindWithTag("DialogueHolder").GetComponent<Battle_Dialogue>();
 
+            dialogue = GameObject.FindWithTag("DialogueHolder").GetComponent<Dialogue>();
 
             Transform buttonParent = GameObject.Find("Buttons").transform;
 
-            btnHandlers = new ButtonHandler[4] 
+            btnHandlers = new ButtonHandler[4]
             {
                 buttonParent.GetChild(0).GetComponent<ButtonHandler>(),
                 buttonParent.GetChild(1).GetComponent<ButtonHandler>(),
@@ -66,82 +60,76 @@ namespace FightHandler
                 buttonParent.GetChild(3).GetComponent<ButtonHandler>(),
             };
 
-            foreach(ButtonHandler handler in btnHandlers)
-            {
-                handler.Initialize();
-            }
-            playerOnID = 0;
-            RefreshButtons();
+            for (int i = 0; i < 4; i++) btnHandlers[i].Initialize();
+            dialogue.Initialize();
 
-            OnTurnEnter += RefreshButtons;
-            OnTurnEnter += dialogue.ClearDialogueHolder;
+            RepaintButtons();
+
+            //OnTurnEnter += RepaintButtons;
+            EnterPlayerTurn();
         }
 
-        public bool IsPlayerTurn() => currentState == PossibleFightStates.PlayerTurn;
-        public bool IsInteracting(int id) => playerOnID == id;
+        public bool IsPlayerTurn() => isPlayerTurn;
+        public bool IsInteracting(int id) => playerOnID == id && IsPlayerTurn();
 
         void Update()
         {
-            if (currentState == PossibleFightStates.PlayerTurn) Debug();
+            if (IsPlayerTurn()) MoveInButtons();
         }
 
-        private bool running;
         private IEnumerator EnterEnemyAttack()
         {
-            if (running) yield break;
-
             EnterEnemyTurn();
             yield return new WaitForSeconds(fightData.enemyTurnTime);
-            
+
             EnterPlayerTurn();
         }
 
         private void EnterPlayerTurn()
         {
             playerMovement.canMove = false;
-            
-            StartCoroutine(boxHandler.ChangeSize(boxHandler.dialogueWidth.x, boxHandler.dialogueHeight.x));
-            currentState = PossibleFightStates.PlayerTurn;
+
+            boxHandler.ParseChangeSize(15, 4);
+            isPlayerTurn = true;
 
             player.position = buttonPos[0];
-            
-            
-            RefreshButtons();
 
-            running = false;
+            RepaintButtons();
+
             OnTurnEnter();
             turn++;
         }
 
         private void EnterEnemyTurn()
         {
-            running = true;
-            StartCoroutine(boxHandler.ChangeSize(4, 4));
-            currentState = PossibleFightStates.EnemyTurn;
+            boxHandler.ParseChangeSize(4, 4);
+            isPlayerTurn = false;
             playerMovement.canMove = true;
+
+            RepaintButtons();
         }
 
-        private void Debug()
+        private void MoveInButtons()
         {
-            
-            if (InputManager.inputMgr.GetLeftArrowKey())
+
+            if (inputMgr.GetLeftArrowKey())
             {
                 playerOnID--; if (playerOnID < 0) playerOnID = 3;
-                RefreshButtons();
+                RepaintButtons();
             }
-            
-            if (InputManager.inputMgr.GetRightArrowKey())
+
+            if (inputMgr.GetRightArrowKey())
             {
                 playerOnID++; if (playerOnID > 3) playerOnID = 0;
-                RefreshButtons();
+                RepaintButtons();
             }
         }
 
-        private void RefreshButtons()
+        private void RepaintButtons()
         {
             for (int i = 0; i < 4; i++)
             {
-                if (i == playerOnID)
+                if (IsInteracting(i))
                 {
                     player.position = buttonPos[i];
                     btnHandlers[i].EnterInteraction();
@@ -154,27 +142,58 @@ namespace FightHandler
         public void CallFIGHT()
         {
             print("FIGHT!!!");
-            player.position = defaultPos;
-            StartCoroutine(EnterEnemyAttack());
         }
 
         public void CallACT()
         {
             print("ACT!!!");
-            player.position = defaultPos;
-            StartCoroutine(EnterEnemyAttack());
         }
 
         public void CallITEM()
         {
             print("ITEM!!!");
-            player.position = defaultPos;
-            StartCoroutine(EnterEnemyAttack());
+            Player_Battle.Player.player.Heal(3);
         }
 
         public void CallMERCY()
         {
             print("MERCY!!!");
+        }
+
+        public void Call(int id)
+        {
+            switch (id)
+            {
+                // Fight button
+                case 0:
+                    {
+                        CallFIGHT();
+                        break;
+                    }
+                // Act button
+                case 1:
+                    {
+                        CallACT();
+                        break;
+                    }
+                // Item button
+                case 2:
+                    {
+                        CallITEM();
+                        break;
+                    }
+                // Mercy button
+                case 3:
+                    {
+                        CallMERCY();
+                        break;
+                    }
+            }
+            ButtonCall();
+        }
+
+        private void ButtonCall()
+        {
             player.position = defaultPos;
             StartCoroutine(EnterEnemyAttack());
         }

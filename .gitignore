@@ -9,7 +9,11 @@
 /[Bb]uilds/
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
-
+<<<<<<< HEAD
+/[Aa]ssets/[Tt]ext[Mm]esh [Pp]ro/[Ff]onts
+=======
+/Assets/TextMesh Pro/Fonts/
+>>>>>>> fa9225f06638713733dc76d52e8e7cddd962d2cd
 # MemoryCaptures can get excessive in size.
 # They also could contain extremely sensitive data
 /[Mm]emoryCaptures/
