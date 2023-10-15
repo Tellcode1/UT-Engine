@@ -358,9 +358,11 @@ MonoBehaviour:
   pos: {x: 0, y: 0}
   moveToPos: {x: 0, y: 0}
   defaultPos: {x: 0, y: 10}
+  chargeTime: 0.5
   beamLifetime: 1
   approachTime: 1.5
-  epsilon: 0.0001
+  epsilon: 0.00001
+  initialFlySpeed: 0.01
 --- !u!1 &658749934
 GameObject:
   m_ObjectHideFlags: 0

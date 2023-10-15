@@ -17,6 +17,11 @@ public class GasterBlaster : Bullet
     private Quaternion rot = new();
 
     /// <summary>
+    /// The direction from "moveToPos" to "pos". This should not be changed as it is used internally.
+    /// </summary>
+    private Vector2 dirToPos = new();
+
+    /// <summary>
     /// The position the blaster will move to.
     /// </summary>
     [Tooltip("The position the blaster will move to.")]
@@ -25,7 +30,7 @@ public class GasterBlaster : Bullet
     /// <summary>
     /// The default position of the blaster. The position from where the blaster will move from. (Set in Initialize).
     /// </summary>
-    [Tooltip("The default position of the blaster. The position from where the blaster will move from. (Set in Initialize).")] 
+    [Tooltip("The default position of the blaster. The position from where the blaster will move from. (Set in Initialize).")]
     public Vector2 defaultPos = new();
 
     /// <summary>
@@ -41,9 +46,9 @@ public class GasterBlaster : Bullet
     public float beamLifetime = 1f;
 
     /// <summary>
-    /// The time it takes for the blaster to approach the position specified in "moveToPos".
+    /// The time (in seconds) it takes for the blaster to approach the position specified in "moveToPos".
     /// </summary>
-    [SerializeField, Tooltip("The time it takes for the blaster to approach the position specified in \"moveToPos\".")] 
+    [SerializeField, Tooltip("The time it takes for the blaster to approach the position specified in \"moveToPos\".")]
     private float approachTime = 1f;
 
     /// <summary>
@@ -51,10 +56,10 @@ public class GasterBlaster : Bullet
     /// </summary>
     private Transform beam;
 
-    /// <summary>
+    //// <summary>
     /// The time that the blaster has spent. (Calculated in FixedUpdate)
-    /// </summary>
-    private float timeSinceSpawn = 0f;
+    //// </summary>
+    //private float timeSinceSpawn = 0f;
 
     // You idiot, this won't be used elsewhere.
     private UnityAction OnReadyToFire;
@@ -69,21 +74,19 @@ public class GasterBlaster : Bullet
     {
         transform.position = defaultPos;
         // Reset the timeSinceSpawn because I F@$$#G FORGOT TO DO SO.
-        timeSinceSpawn = 0f;
+        //timeSinceSpawn = 0f;
 
         // This is why, do not change your children.
         beam = transform.GetChild(0);
 
         // Get the player's position only if "pos" hasn't been set in the editor.
-        /*if (pos == Vector2.zero) */
 
         pos = (Vector2)Player_Battle.Player.player.transform.position;
-        //rot = Quaternion.LookRotation(transform.forward, pos);
-        Vector2 newUp = (pos - (Vector2)transform.position).normalized;
+        
+        dirToPos = (pos - moveToPos).normalized;
+        rot = Quaternion.LookRotation(transform.forward, dirToPos);
 
-        rot = Quaternion.FromToRotation(Vector2.up, newUp);
-        transform.up = -newUp;
-        //rot = Quaternion.Euler(pos - (Vector2)transform.position);
+        transform.up = -dirToPos;
 
         OnReadyToFire += Fire;
 
@@ -93,11 +96,11 @@ public class GasterBlaster : Bullet
     private void OnDisable() =>
         OnReadyToFire -= Fire;
 
-    private void FixedUpdate()
-    {
-        // Update the time since spawn for scripts.
-        timeSinceSpawn += Time.fixedDeltaTime;
-    }
+    //private void FixedUpdate()
+    //{
+    //    // Update the time since spawn for scripts.
+    //    //timeSinceSpawn += Time.fixedDeltaTime;
+    //}
 
     Coroutine changePosRot = null;
     // Before firing, handle the job here then pass it on to fire.
@@ -109,9 +112,6 @@ public class GasterBlaster : Bullet
             changePosRot = null;
         }
         changePosRot ??= StartCoroutine(HandlePositionAndRotation());
-
-        // The blaster is ready to fire. Then fire it you stupid idiot.
-        OnReadyToFire();
     }
 
     /// <summary>
@@ -122,7 +122,8 @@ public class GasterBlaster : Bullet
     [SerializeField, Tooltip("The epsilon value for comparisons " +
         "(for assessing whether the player is at the position it need be or not)." +
         " \r\n Raising this value may increase the time the blaster spends to get to the position. \r\n " +
-        "But keeping this value a little high is recommended.")] float epsilon;
+        "But keeping this value a little high is recommended.")]
+    float epsilon;
 
     // Because we don't need it to be exact.
     private bool Compare(Vector2 a, Vector2 b)
@@ -145,16 +146,17 @@ public class GasterBlaster : Bullet
         do
         {
             timer += Time.fixedDeltaTime;
-            // This should lerp to the rotation and position at the same time right?
 
             float t = timer / approachTime;
 
+            // This should lerp to the rotation and position at the same time right?
             // It does!
             transform.SetPositionAndRotation
                 (
                     Vector3.Lerp(transform.position, moveToPos, t),
                     Quaternion.Lerp(transform.rotation, rot, t) // It's slerp? I thought it was slurp bro...
                 );
+
             yield return new WaitForFixedUpdate();
         }
         // While current position or rotation is not equal to target.
@@ -165,7 +167,24 @@ public class GasterBlaster : Bullet
 
     private void Fire()
     {
-        StartCoroutine(HandleBeam());
+        print("Fired!!!");
+        StartCoroutine(Fly());
+    }
+
+    [SerializeField] private float initialFlySpeed = 0.01f;
+    private IEnumerator Fly()
+    {
+        float force = initialFlySpeed;
+
+        // 60 Frames of nitro
+        for (int i = 0; i < 60; i++)
+        {
+            force += initialFlySpeed;
+            // This is already localised??? Somebody could've told me that???
+            // ... I'm an idiot.
+            transform.Translate(0, -force, 0);
+            yield return new WaitForFixedUpdate();
+        }
     }
 
     private IEnumerator HandleBeam()
