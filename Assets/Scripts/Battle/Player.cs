@@ -1,4 +1,5 @@
 using System.Collections;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using static InputManager;
@@ -171,6 +172,18 @@ namespace Player_Battle
             }
             while (true);
         }
+
+    }
+}
+
+[CanEditMultipleObjects, CustomEditor(typeof(Player_Battle.Player))]
+public class newEditor : Editor
+{
+    public override void OnInspectorGUI()
+    {
+        DrawDefaultInspector();
+
+        GUILayout.Label("Movement");
 
     }
 }

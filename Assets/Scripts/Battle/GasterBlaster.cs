@@ -1,13 +1,14 @@
 using System.Collections;
-using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.Events;
 
 public class GasterBlaster : Bullet
 {
+    // Public fields are marked so, so that the pooler can change these values and reuse them if it likes. DO NOT CHANGE THEM!
     /// <summary>
     /// The position the blaster will aim at. Leave this at Vector2.zero if you want it to aim at the player.
     /// </summary>
+    [Tooltip("The position the blaster will aim at. Leave this at Vector2.zero if you want it to aim at the player.")]
     public Vector2 pos = new();
 
     /// <summary>
@@ -18,17 +19,32 @@ public class GasterBlaster : Bullet
     /// <summary>
     /// The position the blaster will move to.
     /// </summary>
+    [Tooltip("The position the blaster will move to.")]
     public Vector2 moveToPos = new();
+
+    /// <summary>
+    /// The default position of the blaster. The position from where the blaster will move from. (Set in Initialize).
+    /// </summary>
+    [Tooltip("The default position of the blaster. The position from where the blaster will move from. (Set in Initialize).")] 
+    public Vector2 defaultPos = new();
+
+    /// <summary>
+    /// The time the blaster charges for then shoots. Will be evaluated after the blaster has reached its target position.
+    /// </summary>
+    [SerializeField, Tooltip("The time the blaster charges for then shoots. Will be evaluated after the blaster has reached its target position.")]
+    private float chargeTime = .5f;
 
     /// <summary>
     /// The time the beam will be active for. Should generally be divisible by 2 to preserve animations.
     /// </summary>
+    [Tooltip("The time the beam will be active for. Should generally be divisible by 2 to preserve animations.")]
     public float beamLifetime = 1f;
 
     /// <summary>
     /// The time it takes for the blaster to approach the position specified in "moveToPos".
     /// </summary>
-    [SerializeField] private float approachTime = 1;
+    [SerializeField, Tooltip("The time it takes for the blaster to approach the position specified in \"moveToPos\".")] 
+    private float approachTime = 1f;
 
     /// <summary>
     /// The beam that the blaster will fire. This will initially be disabled and enable when the blaster fires.
@@ -51,6 +67,7 @@ public class GasterBlaster : Bullet
     }
     public void Initialize()
     {
+        transform.position = defaultPos;
         // Reset the timeSinceSpawn because I F@$$#G FORGOT TO DO SO.
         timeSinceSpawn = 0f;
 
@@ -59,10 +76,11 @@ public class GasterBlaster : Bullet
 
         // Get the player's position only if "pos" hasn't been set in the editor.
         /*if (pos == Vector2.zero) */
+
         pos = (Vector2)Player_Battle.Player.player.transform.position;
         //rot = Quaternion.LookRotation(transform.forward, pos);
         Vector2 newUp = (pos - (Vector2)transform.position).normalized;
-        
+
         rot = Quaternion.FromToRotation(Vector2.up, newUp);
         transform.up = -newUp;
         //rot = Quaternion.Euler(pos - (Vector2)transform.position);
@@ -81,11 +99,10 @@ public class GasterBlaster : Bullet
         timeSinceSpawn += Time.fixedDeltaTime;
     }
 
-    Coroutine changePosRot;
+    Coroutine changePosRot = null;
     // Before firing, handle the job here then pass it on to fire.
     private void Prefire()
     {
-        print("Running");
         if (changePosRot != null)
         {
             StopCoroutine(changePosRot);
@@ -99,9 +116,13 @@ public class GasterBlaster : Bullet
 
     /// <summary>
     /// <br> The epsilon value for comparisons (for assessing whether the player is at the position it need be or not).</br> 
-    /// <br> Raising this value may increase the time the blaster spends to get to the position. </br>
+    /// <br> Raising this value may increase the time the blaster spends to get to the position. 
+    /// But keeping this value a little high is recommended.</br>
     /// </summary>
-    [SerializeField] float epsilon;
+    [SerializeField, Tooltip("The epsilon value for comparisons " +
+        "(for assessing whether the player is at the position it need be or not)." +
+        " \r\n Raising this value may increase the time the blaster spends to get to the position. \r\n " +
+        "But keeping this value a little high is recommended.")] float epsilon;
 
     // Because we don't need it to be exact.
     private bool Compare(Vector2 a, Vector2 b)
@@ -121,14 +142,14 @@ public class GasterBlaster : Bullet
     {
         float timer = 0;
 
-        //while (Compare(transform.position, pos) && Compare(transform.rotation, rot))
-        while ((Vector2)transform.position != pos && transform.rotation != rot)
+        do
         {
             timer += Time.fixedDeltaTime;
+            // This should lerp to the rotation and position at the same time right?
 
             float t = timer / approachTime;
 
-            // This should lerp to the rotation and position at the same time right?
+            // It does!
             transform.SetPositionAndRotation
                 (
                     Vector3.Lerp(transform.position, moveToPos, t),
@@ -136,6 +157,10 @@ public class GasterBlaster : Bullet
                 );
             yield return new WaitForFixedUpdate();
         }
+        // While current position or rotation is not equal to target.
+        while (!Compare(transform.position, moveToPos) || !Compare(transform.rotation, rot));
+
+        Invoke(nameof(Fire), chargeTime);
     }
 
     private void Fire()
