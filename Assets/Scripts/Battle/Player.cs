@@ -54,6 +54,7 @@ namespace Player_Battle
             }
             player = this;
 
+            // Stupid rb goes to sleep and I can't find a way to stop it other than the editor.
             rb = GetComponent<Rigidbody2D>();
             spr = GetComponent<SpriteRenderer>();
 
@@ -79,10 +80,8 @@ namespace Player_Battle
             }
         }
 
-        void FixedUpdate()
-        {
+        void FixedUpdate() =>
             Move();
-        }
 
 
         public bool canMove;
@@ -95,13 +94,18 @@ namespace Player_Battle
 
 
         [SerializeField] private bool canTakeDamage = true;
+        Coroutine invin;
         public void TakeDamage(int damage)
         {
             if (canTakeDamage)
             {
                 dataFile.Hp -= damage;
                 RepaintHealthbar();
-                StartCoroutine(Invincibility());
+                
+                if (invin != null) 
+                    StopCoroutine(invin);
+                
+                invin = StartCoroutine(Invincibility());
             }
         }
 
@@ -141,14 +145,14 @@ namespace Player_Battle
         private IEnumerator Invincibility()
         {
             canTakeDamage = false;
-            
+
             Coroutine animate_Sprite = StartCoroutine(Invicibility_AnimateSprite());
 
             for (int i = 0; i < IFrames; i++)
                 yield return new WaitForFixedUpdate();
-            
+
             StopCoroutine(animate_Sprite);
-            
+
             // Reset sprite color to avoid stupid shenanigans.
             spr.color = defaultColor;
 
@@ -158,13 +162,14 @@ namespace Player_Battle
         private IEnumerator Invicibility_AnimateSprite()
         {
             // While true is true do this
-            while (true)
+            do
             {
                 spr.color = damagedColor;
                 yield return new WaitForSeconds(.125f);
                 spr.color = defaultColor;
                 yield return new WaitForSeconds(.125f);
             }
+            while (true);
         }
 
     }

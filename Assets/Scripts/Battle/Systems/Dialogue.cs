@@ -31,7 +31,7 @@ namespace BattleSystems
             bboxHandler = GameObject.FindWithTag("BattleBoxHandler").GetComponent<BattleBoxHandler>();
 
             FManager.OnTurnEnter += StopDialogue;
-            FManager.OnTurnEnter += RequestDialogue;
+            FManager.OnTurnEnter += AutoDialogue;
         }
 
 
@@ -53,6 +53,20 @@ namespace BattleSystems
             if (!FManager.IsPlayerTurn()) dialogueHolder.color = Color.clear;
             else dialogueHolder.color = Color.white;
         }
+
+        private void AutoDialogue()
+        {
+            try
+            {
+                if (FManager.IsPlayerTurn())
+                    StartCoroutine(AppendText(FManager.turn));
+            }
+            catch (System.IndexOutOfRangeException)
+            {
+                RequestDialogue();
+            }
+        }
+
         int i;
         public void RequestDialogue()
         {
@@ -69,14 +83,14 @@ namespace BattleSystems
         }
 
 
-        IEnumerator AppendText(int index)
+        private IEnumerator AppendText(int index)
         {
             dialogueHolder.text = string.Empty;
 
             dialogueHolder.fontSize = dialoguePool[index].textSize;
 
             // UNDERTALE.
-            dialogueHolder.text += '*' + " ";
+            dialogueHolder.text += "* ";
 
             for (int i = 0; i < dialoguePool[index].line.Length; i++)
             {
@@ -85,14 +99,32 @@ namespace BattleSystems
             }
         }
 
+        private IEnumerator AppendText(string text)
+        {
+            dialogueHolder.text = string.Empty;
+            dialogueHolder.fontSize = 25;
+            dialogueHolder.text += "* ";
+            for (int i = 0; i < text.Length; i++)
+            {
+                dialogueHolder.text += text[i];
+                yield return new WaitForSeconds(0.1f);
+            }
+        }
+
         private void StopDialogue()
         {
             // Directly question the coroutine because it can be broken unlike the bboxHandler's coroutine.
-            if (appendText != null)
+            if(appendText != null)
             {
                 StopCoroutine(appendText);
                 dialogueHolder.text = string.Empty;
             }
+        }
+
+        public void ParseText(string text)
+        {
+            StopDialogue();
+            StartCoroutine(AppendText(text));
         }
     }
 }

@@ -6,7 +6,6 @@ namespace BattleSystems
     public class BattleBoxHandler : MonoBehaviour
     {
         #region Variable Decleration
-        Transform player;
         Transform walls;
 
         // Only use upWall and leftWall for measurements because I said so.
@@ -31,7 +30,6 @@ namespace BattleSystems
 
         private void Start()
         {
-            player = GameObject.FindWithTag("Player").transform;
             walls = GameObject.FindWithTag("Wall").transform;
 
             upWall = walls.GetChild(0);
@@ -54,12 +52,11 @@ namespace BattleSystems
             //float sqrChangeSpeed = changeSpeed * changeSpeed;
 
             float timer = 0f;
-            while (upWall.localScale.x != UpBottomScale  || leftWall.localScale.x != LeftRightScale)
+            while (upWall.localScale.x != UpBottomScale || leftWall.localScale.x != LeftRightScale)
             {
-                print("running");
                 timer += Time.fixedDeltaTime;
                 float t = timer / timeToFinish;
-                
+
                 upWall.localScale = downWall.localScale = new(Mathf.Lerp(upWall.localScale.x, UpBottomScale, t), defaultWidth);
                 leftWall.localScale = rightWall.localScale = new Vector2(Mathf.Lerp(leftWall.localScale.x, LeftRightScale, t), defaultWidth);
                 //upWall.localScale = downWall.localScale = new Vector2(Mathf.MoveTowards(upWall.localScale.x, UpBottomScale, ep + (Vector2.SqrMagnitude((Vector2)upWall.localScale - Vector2.one * UpBottomScale) / sqrChangeSpeed)), dWidth);
@@ -70,12 +67,6 @@ namespace BattleSystems
             }
             AdjustPositions();
             isChangingSize = false;
-        }
-
-        [SerializeField] private float epsilon = Mathf.Epsilon;
-        private bool ApproxEqualTo(float a, float b, float epsilon)
-        {
-            return Mathf.Abs(a - b) < epsilon;
         }
 
         private Coroutine coroutine;
