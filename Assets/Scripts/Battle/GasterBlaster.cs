@@ -1,10 +1,18 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.Events;
 
+// TODO: This needs a lota lot of refactoring.
 public class GasterBlaster : Bullet
 {
+    #region Variable Decleration.
     // Public fields are marked so, so that the pooler can change these values and reuse them if it likes. DO NOT CHANGE THEM!
+
+    /// <summary>
+    /// Whether the blaster is active or not. This will be used by the pooler or whatever.
+    /// </summary>
+    [Tooltip("Whether the blaster is active or not. This will be used by the pooler or whatever.")]
+    public bool active = false;
+
     /// <summary>
     /// The position the blaster will aim at. Leave this at Vector2.zero if you want it to aim at the player.
     /// </summary>
@@ -40,6 +48,12 @@ public class GasterBlaster : Bullet
     private float chargeTime = .5f;
 
     /// <summary>
+    /// The time the blaster will be active for. Should generally be a little high to prevent shenanigans. Calculated after firing.
+    /// </summary>
+    [Tooltip("The time the blaster will be active for. Should generally be a little high to prevent shenanigans. Calculated after firing.")]
+    public float lifeTime = 5f;
+
+    /// <summary>
     /// The time the beam will be active for. Should generally be divisible by 2 to preserve animations.
     /// </summary>
     [Tooltip("The time the beam will be active for. Should generally be divisible by 2 to preserve animations.")]
@@ -56,63 +70,6 @@ public class GasterBlaster : Bullet
     /// </summary>
     private Transform beam;
 
-    //// <summary>
-    /// The time that the blaster has spent. (Calculated in FixedUpdate)
-    //// </summary>
-    //private float timeSinceSpawn = 0f;
-
-    // You idiot, this won't be used elsewhere.
-    private UnityAction OnReadyToFire;
-
-    // Use on enable you stupid idiot so it can be re used for pooling.
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Mouse0))
-            Initialize();
-    }
-    public void Initialize()
-    {
-        transform.position = defaultPos;
-        // Reset the timeSinceSpawn because I F@$$#G FORGOT TO DO SO.
-        //timeSinceSpawn = 0f;
-
-        // This is why, do not change your children.
-        beam = transform.GetChild(0);
-
-        // Get the player's position only if "pos" hasn't been set in the editor.
-
-        pos = (Vector2)Player_Battle.Player.player.transform.position;
-        
-        dirToPos = (pos - moveToPos).normalized;
-        rot = Quaternion.LookRotation(transform.forward, dirToPos);
-
-        transform.up = -dirToPos;
-
-        OnReadyToFire += Fire;
-
-        Prefire();
-    }
-
-    private void OnDisable() =>
-        OnReadyToFire -= Fire;
-
-    //private void FixedUpdate()
-    //{
-    //    // Update the time since spawn for scripts.
-    //    //timeSinceSpawn += Time.fixedDeltaTime;
-    //}
-
-    Coroutine changePosRot = null;
-    // Before firing, handle the job here then pass it on to fire.
-    private void Prefire()
-    {
-        if (changePosRot != null)
-        {
-            StopCoroutine(changePosRot);
-            changePosRot = null;
-        }
-        changePosRot ??= StartCoroutine(HandlePositionAndRotation());
-    }
 
     /// <summary>
     /// <br> The epsilon value for comparisons (for assessing whether the player is at the position it need be or not).</br> 
@@ -125,78 +82,191 @@ public class GasterBlaster : Bullet
         "But keeping this value a little high is recommended.")]
     float epsilon;
 
-    // Because we don't need it to be exact.
-    private bool Compare(Vector2 a, Vector2 b)
+    /// <summary>
+    /// The initial scale for the beam. Specifically the x component.
+    /// </summary>
+    [SerializeField, Tooltip("The initial scale for the beam. Specifically the x component.")] private float initialScale = 1f;
+
+    /// <summary>
+    /// Used internally. Do not modify.
+    /// </summary>
+    Coroutine changePosRot = null;
+
+#endregion
+
+    // Use on enable you stupid idiot so it can be re used for pooling.
+    private void Update()
     {
-        return Mathf.Abs(a.x - b.x) < epsilon &&
-               Mathf.Abs(a.y - b.y) < epsilon;
-    }
-    private bool Compare(Quaternion a, Quaternion b)
-    {
-        return Mathf.Abs(a.x - b.x) < epsilon &&
-               Mathf.Abs(a.y - b.y) < epsilon &&
-               Mathf.Abs(a.z - b.z) < epsilon &&
-               Mathf.Abs(a.w - b.w) < epsilon;
+        // Fpr debugging.
+        if (Input.GetKeyDown(KeyCode.Mouse0))
+            Initialize();
     }
 
-    private IEnumerator HandlePositionAndRotation()
+    private void ResetValues()
     {
-        float timer = 0;
+        active = true;
+        transform.position = defaultPos;
+        beam.gameObject.SetActive(false);
+        beam.GetComponent<SpriteRenderer>().color = Color.white;
+    }
 
-        do
+
+    /// <summary>
+    /// To activate the blaster, you only need to initialize it. If you want custom values such as a custom position, set this beforehand.
+    /// </summary>
+    public void Initialize()
+    {
+        if (active) throw new System.Exception("Object is already active!");
+        // This is why, do not change your children.
+        beam = transform.GetChild(0);
+
+        ResetValues();
+
+
+        // TODO: Get the player's position only if "pos" hasn't been set in the editor.
+        pos = (Vector2)Player_Battle.Player.player.transform.position;
+
+        dirToPos = (moveToPos - pos).normalized;
+        rot = Quaternion.LookRotation(transform.forward, dirToPos);
+
+        transform.up = -dirToPos;
+
+        //OnReadyToFire += Fire;
+        StopAllCoroutines();
+
+        Prefire();
+
+
+
+        // Before firing, handle the job here then pass it on to fire.
+        void Prefire()
         {
-            timer += Time.fixedDeltaTime;
-
-            float t = timer / approachTime;
-
-            // This should lerp to the rotation and position at the same time right?
-            // It does!
-            transform.SetPositionAndRotation
-                (
-                    Vector3.Lerp(transform.position, moveToPos, t),
-                    Quaternion.Lerp(transform.rotation, rot, t) // It's slerp? I thought it was slurp bro...
-                );
-
-            yield return new WaitForFixedUpdate();
+            if (changePosRot != null)
+            {
+                StopCoroutine(changePosRot);
+                changePosRot = null;
+            }
+            changePosRot ??= StartCoroutine(HandlePositionAndRotation());
         }
-        // While current position or rotation is not equal to target.
-        while (!Compare(transform.position, moveToPos) || !Compare(transform.rotation, rot));
 
-        Invoke(nameof(Fire), chargeTime);
+        IEnumerator HandlePositionAndRotation()
+        {
+
+            float timer = 0;
+
+            do
+            {
+                timer += Time.fixedDeltaTime;
+
+                float t = timer / approachTime;
+
+                // This should lerp to the rotation and position at the same time right?
+                // It does!
+                transform.SetPositionAndRotation
+                    (
+                        Vector3.Lerp(transform.position, moveToPos, t),
+                        Quaternion.Lerp(transform.rotation, rot, t) // It's slerp? I thought it was slurp bro...
+                    );
+
+                yield return new WaitForFixedUpdate();
+            }
+            // While current position or rotation is not equal to target.
+            while (!Compare(transform.position, moveToPos) || !CompareQuaternion(transform.rotation, rot));
+
+            Invoke(nameof(this.Fire), chargeTime);
+        }
+
+
+        bool Compare(Vector2 a, Vector2 b)
+        {
+            return Mathf.Abs(a.x - b.x) < epsilon &&
+                   Mathf.Abs(a.y - b.y) < epsilon;
+        }
+        bool CompareQuaternion(Quaternion a, Quaternion b)
+        {
+            return Mathf.Abs(a.x - b.x) < epsilon &&
+                   Mathf.Abs(a.y - b.y) < epsilon &&
+                   Mathf.Abs(a.z - b.z) < epsilon &&
+                   Mathf.Abs(a.w - b.w) < epsilon;
+        }
+
     }
 
+    /// <summary>
+    /// Get the notification from Prefire() and then pass it on to whatever.
+    /// </summary>
     private void Fire()
     {
-        print("Fired!!!");
         StartCoroutine(Fly());
+        StartCoroutine(HandleBeam());
+        print("Fired!!!");
     }
 
-    [SerializeField] private float initialFlySpeed = 0.01f;
+
     private IEnumerator Fly()
     {
+        Rigidbody2D rb = GetComponent<Rigidbody2D>();
         float force = initialFlySpeed;
 
         // 60 Frames of nitro
+        // INFINITY FRAMES OF NITRO YOOOOOOOOOOOOOOOOOOOOO
+        // Did not work :<
+
+        // TODO: You may wanna find a new way to do this (Fly). The current method freezes sometimes due to unknown circumstances.
         for (int i = 0; i < 60; i++)
         {
+            print("Trying to fly!");
             force += initialFlySpeed;
             // This is already localised??? Somebody could've told me that???
             // ... I'm an idiot.
-            transform.Translate(0, -force, 0);
+            // I am just too stupid for this project. Somebody get a replacement please.
+            rb.AddRelativeForce(Vector2.up * force);
             yield return new WaitForFixedUpdate();
         }
+
+        StartCoroutine(HandleBeam());
     }
 
+    [SerializeField] float test;
+    [SerializeField] float beam_Speed;
+    [SerializeField] float beam_Amplitude;
+    // TODO: Implement the beam. Add the animations later.
     private IEnumerator HandleBeam()
     {
-        yield break;
-        //beam.localScale = new Vector2(transform.localScale.x, beam.transform.localScale.y);
-        //float initialScale = beam.localScale.x;
+        beam.gameObject.SetActive(true);
+        SpriteRenderer spr = beam.GetComponent<SpriteRenderer>();
+        spr.color = Color.white;
 
-        //while (true)
-        //{
-        //    beam.localScale = new Vector2(Mathf.Sin(timeSinceSpawn * initialScale), beam.localScale.y);
-        //    yield return new WaitForSeconds(1f);
-        //}
+        Vector2 initScale = new(initialScale, beam.localScale.y);
+        for (int i = 0; i < Mathf.RoundToInt(beamLifetime * 2 / 3) * 60; i++)
+        {
+            float GodForgiveMeForWhatIAmAboutToDo = Mathf.Sin(Time.time * beam_Speed) * beam_Amplitude;
+            beam.localScale = new Vector2(initScale.x + (GodForgiveMeForWhatIAmAboutToDo / test), initScale.y);
+            yield return new WaitForFixedUpdate();
+        }
+
+        float timer = 0f;
+        while (spr.color.a != 0)
+        {
+            timer += Time.fixedDeltaTime;
+
+            float t = timer / (beamLifetime * 1 / 3);
+            //float betterT = timer / (beamLifetime * .9f);
+
+            beam.localScale = new(Mathf.Lerp(initScale.x, initScale.x * .3f, t), initScale.y);
+            
+            Color col = spr.color;
+            col.a = Mathf.Lerp(col.a, 0, t);
+            spr.color = col;
+
+            //spr.color = Vector4.Lerp(Color.white, Color.clear, betterT);
+            yield return new WaitForFixedUpdate();
+            if (t >= 1f) yield break;
+        }
+        beam.gameObject.SetActive(false);
+        yield return new WaitForSeconds(lifeTime);
+        active = false;
     }
+
+    [SerializeField] private float initialFlySpeed = 0.01f;
 }
