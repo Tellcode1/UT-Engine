@@ -90,11 +90,14 @@ namespace BattleSystems
             dialogueHolder.fontSize = dialoguePool[index].textSize;
 
             // UNDERTALE.
-            dialogueHolder.text += "* ";
+            System.Text.StringBuilder sb = new("* ", 256);
+            
 
             for (int i = 0; i < dialoguePool[index].line.Length; i++)
             {
-                dialogueHolder.text += dialoguePool[index].line[i];
+                //dialogueHolder.text += dialoguePool[index].line[i];
+                sb.Append(dialoguePool[index].line[i]);
+                dialogueHolder.text = sb.ToString();
                 yield return new WaitForSeconds(dialoguePool[index].speed);
             }
         }
