@@ -56,15 +56,8 @@ namespace BattleSystems
 
         private void AutoDialogue()
         {
-            try
-            {
-                if (FManager.IsPlayerTurn())
-                    StartCoroutine(AppendText(FManager.turn));
-            }
-            catch (System.IndexOutOfRangeException)
-            {
-                RequestDialogue();
-            }
+            if (FManager.IsPlayerTurn())
+                StartCoroutine(AppendText(FManager.turn));
         }
 
         int i;
@@ -87,12 +80,21 @@ namespace BattleSystems
         {
             dialogueHolder.text = string.Empty;
 
-            dialogueHolder.fontSize = dialoguePool[index].textSize;
 
             // UNDERTALE.
             System.Text.StringBuilder sb = new("* ", 256);
-            
-
+            try
+            {
+                dialogueHolder.fontSize = dialoguePool[index].textSize;
+            }
+          //catch Just catch any exception please. Okay? No?... YYEEETTT
+            catch (System.IndexOutOfRangeException)
+            {
+                //throw; // I will throw you out of the window.
+                //IT THREW THE FJLJLKFJSJ ERRORRRRRRRRRRRRRRRR
+                dialogueHolder.text = "Not Implemented!";
+                yield break;
+            }
             for (int i = 0; i < dialoguePool[index].line.Length; i++)
             {
                 //dialogueHolder.text += dialoguePool[index].line[i];
@@ -106,10 +108,13 @@ namespace BattleSystems
         {
             dialogueHolder.text = string.Empty;
             dialogueHolder.fontSize = 25;
-            dialogueHolder.text += "* ";
+
+            System.Text.StringBuilder sb = new("* ", 256);
+
             for (int i = 0; i < text.Length; i++)
             {
-                dialogueHolder.text += text[i];
+                sb.Append(text[i]);
+                dialogueHolder.text = sb.ToString();
                 yield return new WaitForSeconds(0.1f);
             }
         }

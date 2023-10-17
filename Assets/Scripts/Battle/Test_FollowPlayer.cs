@@ -11,6 +11,6 @@ public class Test_FollowPlayer : Bullet
     private void OnTriggerStay2D(Collider2D collision)
     {
         if (collision.CompareTag("Player"))
-            SendDamage(1);
+            SendDamage(1, collision.attachedRigidbody);
     }
 }

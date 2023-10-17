@@ -5,14 +5,17 @@ using static Player_Battle.Player;
 
 public abstract class Bullet : MonoBehaviour
 {
-    protected Vector2 initialPosition;
-    public bool initalized;
-    public float activationTime;
-    public float deactivationTime;
+    protected bool active = false;
+    protected UnityAction onBoundsExit;
 
     protected bool toDestroyOnHit;
 
     protected UnityAction onReachedTarget;
+
+    [SerializeField] private float epsilon;
+
+    [SerializeField] private Vector2 bounds = new(20, 20);
+
     /// <summary>
     /// Implement this into OnCollisionEnter or OnCollisionStay depending on the needs.
     /// </summary>
@@ -20,11 +23,21 @@ public abstract class Bullet : MonoBehaviour
     /// <br>The damage sent to the player.</br> 
     /// <br>Do I really have to tell you that buddy? </br>
     /// </param>
-    protected void SendDamage(int damage)
+    protected void SendDamage(int damage, Rigidbody2D collider)
     {
+        collider.WakeUp();
         player.TakeDamage(damage);
         if (toDestroyOnHit)
             Destroy(gameObject);
+    }
+
+    protected void HandleBounds()
+    {
+        if (Mathf.Abs(transform.position.x) > bounds.x || Mathf.Abs(transform.position.y) > bounds.y)
+        {
+            active = false;
+            onBoundsExit();
+        }
     }
 
     /// <summary>
@@ -80,19 +93,28 @@ public abstract class Bullet : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// A method to return the direction to an object as a Quaternion.
+    /// </summary>
+    /// <param name="targetObject">The object to face.</param>
+    /// <returns>Direction To the object</returns>
+    protected Quaternion GetDirectionTo(Vector2 targetObject) => Quaternion.LookRotation(Vector3.forward, targetObject);
+
+
     Coroutine moveAndRotateTo;
     /// <summary>
     /// You don't need to know how this works. It just does. Okay?
     /// </summary>
     /// <param name="targetPosition">The position the blaster will move to.</param>
-    /// <param name="targetRotation">The position the blaster will face.</param>
+    /// <param name="targetObject">The position the blaster will face.</param>
     /// <param name="duration">How long it'll take the blaster to reach both the position and rotation.</param>
-    protected void MoveAndRotateTo(Vector2 targetPosition, Vector2 targetRotation, float duration)
+    protected void MoveAndRotateTo(Vector2 targetPosition, Vector2 targetObject, float duration)
     {
         if (moveAndRotateTo != null)
             StopCoroutine(moveAndRotateTo);
 
-        Quaternion finalRotation = Quaternion.LookRotation(transform.forward, targetRotation);
+        Quaternion finalRotation = GetDirectionTo(targetObject);
+        transform.rotation = GetDirectionTo(-targetObject);
 
         float timer = 0f;
         moveAndRotateTo = StartCoroutine(enumerator());
@@ -110,7 +132,47 @@ public abstract class Bullet : MonoBehaviour
                         Quaternion.Slerp(transform.rotation, finalRotation, t)
                     );
                 // YOU FU#$G IDIOT. WHY AM I SO STUPIDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
-                if (t >= 1)
+                if (t >= 1 - epsilon)
+                {
+                    onReachedTarget();
+                    yield break;
+                }
+                yield return new WaitForFixedUpdate();
+            }
+        }
+   }
+
+    Coroutine moveAndRotateTo2;
+    /// <summary>
+    /// You don't need to know how this works. It just does. Okay?
+    /// </summary>
+    /// <param name="targetPosition">The position the blaster will move to.</param>
+    /// <param name="targetObject">The position the blaster will face.</param>
+    /// <param name="duration">How long it'll take the blaster to reach both the position and rotation.</param>
+    protected void MoveAndRotateTo(Vector2 from, Vector2 targetPosition, Vector2 targetObject, float duration)
+    {
+        if (moveAndRotateTo2 != null)
+            StopCoroutine(moveAndRotateTo2);
+
+        Quaternion finalRotation = GetDirectionTo(targetObject - from);
+        transform.rotation = GetDirectionTo(-targetObject - from);
+
+        float timer = 0f;
+        moveAndRotateTo2 = StartCoroutine(enumerator2());
+        IEnumerator enumerator2()
+        {
+            //while (!Compare((Vector2)transform.position, targetPosition) || !Compare(transform.rotation, finalRotation))
+            while (true)
+            {
+                timer += Time.fixedDeltaTime;
+                float t = timer / duration;
+                transform.SetPositionAndRotation
+                    (
+                        Vector2.Lerp((Vector2)transform.position, targetPosition, t),
+                        Quaternion.Slerp(transform.rotation, finalRotation, t)
+                    );
+                // YOU FU#$G IDIOT. WHY AM I SO STUPIDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+                if ((Vector2)transform.position == targetPosition && transform.rotation == finalRotation)
                 {
                     onReachedTarget();
                     yield break;
@@ -119,43 +181,4 @@ public abstract class Bullet : MonoBehaviour
             }
         }
     }
-
-
-    //bool Compare(Vector2 a, Vector2 b)
-    //{
-    //    //return Mathf.Abs(a.x - b.x) < epsilon &&
-    //    //       Mathf.Abs(a.y - b.y) < epsilon;
-    //    //return Mathf.Abs(Vector2.Distance(a, b)) < epsilon;
-    //    return false;
-    //}
-    //bool Compare(Quaternion a, Quaternion b)
-    //{
-    //    return Mathf.Abs(a.x - b.x) < epsilon &&
-    //           Mathf.Abs(a.y - b.y) < epsilon &&
-    //           Mathf.Abs(a.z - b.z) < epsilon &&
-    //           Mathf.Abs(a.w - b.w) < epsilon;
-    //}
-
-    // Failed idea ;C
-
-    //private Vector2 lerpedVector;
-    //protected Vector2 MoveTowards(Vector2 start, Vector2 target, float duration)
-    //{
-    //    //StartCoroutine(MoveTowards_Helper(start, target, duration));
-    //    return lerpedVector;
-    //}
-    //protected System.Collections.IEnumerator MoveTowards(Vector2 start, Vector2 target, float duration)
-    //{
-    //    float timer = 0;
-    //    do
-    //    {
-    //        timer += Time.fixedDeltaTime;
-    //        float t = timer / duration;
-
-    //        lerpedVector = Vector2.Lerp(start, target, t);
-    //        yield return lerpedVector;
-    //        yield return new WaitForFixedUpdate();
-    //    }
-    //    while (start != target);
-    //}
 }
